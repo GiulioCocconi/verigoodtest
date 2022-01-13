@@ -46,7 +46,7 @@ class Generator(object):
         self.output_filename = output_filename
         self.input_file = None
         self.output_file = None
-        debug(f"Generator has been configured to read from {self.input_filename} and write to {output_filename}")
+        debug(f"Generator has been configured to read from {input_filename} and write to {output_filename}")
         
         self.input_data = ""; # The content of the input file
         self.module_name = "";
