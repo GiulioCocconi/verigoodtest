@@ -1,5 +1,6 @@
 # VeriGoodTest
 This script will generate for you the TB of a Verilog descripted module, including a truth table monitor if you want it
+
 **I took all the regex from [xfguo's tbgen](https://github.com/xfguo/tbgen/blob/master/tbgen.py)**
 
 
