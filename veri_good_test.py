@@ -113,7 +113,7 @@ class Generator(object):
         ## input [7:0] a, b,
 
         tb_translation_type = ['reg', 'wire']
-        for item in re.findall(r'(input|output|inout)[\s](\[.*\])?([^\[\]\n\)\;]*)(\[.*\])?', self.input_data):
+        for item in re.findall(r'(input|output|inout)[\s](\[[^\[]*\])?([^\\[\]\n\\;]*)(\[[^\[]*\])?', self.input_data):
             mod = list(item) 
             debug(f"New Item: {item}") 
 
@@ -150,8 +150,7 @@ class Generator(object):
                 debug(f"New def_item is: {def_item}")
         
                 self.pin_list.append(def_item)
-##Fin qui
-        debug(f"The generator's pin list is now {str(self.pin_list)}")
+            debug(f"The generator's pin list is now {str(self.pin_list)}")
 
     def open_output(self):
         try:
