@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Part of the logic and all of the regex are based on Xiongfei Guo's tbgen
+# Part of the logic and some of the regex are based on Xiongfei Guo's tbgen
 
 import re
 import sys
