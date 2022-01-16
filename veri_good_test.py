@@ -2,17 +2,17 @@
 
 # Part of the logic and all of the regex are based on Xiongfei Guo's tbgen
 
-
-
 import re
 import sys
-
+import os
 import itertools
 
-Debug = False
+Debug = True
 
-## TODO: Check if gate-level modeling works
+## TODO: FIX REG/WIRE FOR BUSES/ARRAYS
 
+## TODO: ADD SUPPORT FOR IO REGS DECLARED LIKE:
+##       input a,b,c;
 
 def debug(msg):
     if Debug:
@@ -25,7 +25,7 @@ def error(msg):
     sys.stderr.write(f"\n[ERROR]\t{msg}!\n\n")
 
 def usage():
-    print(f"USAGE: {sys.argv[0]} <INPUT FILENAME> [OUTPUT FILENAME]")
+    print(f"USAGE: {sys.argv[0]} <INPUT FILENAME> [OUTPUT TB FILENAME]")
 
 def goodbye(exit_status, close = None):
     print("\n")
@@ -41,9 +41,10 @@ def goodbye(exit_status, close = None):
 
 
 class Generator(object):
-    def __init__(self, input_filename, output_filename):
+    def __init__(self, input_filename, output_filename, bin_filename):
         self.input_filename = input_filename
         self.output_filename = output_filename
+        self.bin_filename = bin_filename
         self.input_file = None
         self.output_file = None
         debug(f"Generator has been configured to read from {self.input_filename} and write to {output_filename}")
@@ -97,10 +98,10 @@ class Generator(object):
     def parse_module_name(self):
         debug("Parsing module name...") 
         
-        mod_pattern_string = r"module[\s]+(\S*)[\s]*\([^\)]*\)[\s\S]*"
+        mod_pattern_string = r"module[\s]([^\(\)\;\n\s]*)"
         module_result = re.findall(mod_pattern_string, self.input_data)
         self.module_name = module_result[0]
-        
+       
         debug(f"Found module name {self.module_name}")
 
     def parse_io(self):
@@ -108,49 +109,51 @@ class Generator(object):
         Parses all IO ports
         '''
 
-        temp_io_list = [] # It will contain any HDL IO item, but not the test implementation
+        ## Possibilities:
+        ## input a,   
+        ## input [7:0] a,
+        ## input a, b,
+        ## input [7:0] a, b,
 
-        for i in re.findall(r'(input|output|inout)[\s]+([^;,\)]+)[\s]*[;,)]', self.input_data):
+        tb_translation_type = ['reg', 'wire']
+        for item in re.findall(r'(input|output|inout)[\s](\[.*\])?([^\[\]\n\)\;]*)(\[.*\])?', self.input_data):
+            mod = list(item) 
+            debug(f"New Item: {item}") 
 
-            new_item = (i[0], re.sub(r"^reg[\s]*", "", i[1]))
-            temp_io_list.append(new_item) # ('input', '[2:0] A')
-            debug("Found io item: " + str(new_item))
-
-        ## If HDL IO is an input, then it will be reg in test
-        ## If HDL IO is an output/inout, then it will be wire in test
-        type_names = ['reg', 'wire', 'ERROR']
+            mod[2] = mod[2].replace(" ", "")
+            io_names = mod[2].split(sep=",")
+         
+            io_names = [x for x in io_names if x] # Remove empty elements
         
-        for io_el in temp_io_list:
-            if io_el[0] == "input":
-                io_el_type = 0
+            debug(f"new io_names found: {io_names}") 
+        
+            for port_name in io_names:
+                temp_io_item = (item[0], item[1], port_name, item[3]) # (direction, bus, name, array)
+             
+                # Find TB type
+                if item[0] == "input":
+                    io_type = 0
+                elif item[0] == "inout":
+                    io_type = 0
+                    self.truth_not_supported = True
+                elif item[0] == "output":
+                    io_type = 1
+                else:
+                    # Handle error
+                    error(f"Type {item[0]} is unknown")
+                    goodbye(1, self.close)
 
-            elif io_el[0] == "inout":
-                io_el_type = 0
-                self.truth_not_supported = True;
-
-            elif io_el[0] == "output":
-                io_el_type = 1
-            else:
-                error(f"Unknown type {str(io_el[0])} for {(io_el[1])}")
-                goodbye(1, self.close)
-
-            ## Handles buses
-            io_el_bus_parse = io_el[1].split(' ') # ['[2:0]', 'A'] 
-            has_buses = (len(io_el_bus_parse) == 2)
-
-            if has_buses:
-                new_list_el = (io_el[0], io_el_bus_parse[1], io_el_bus_parse[0], type_names[io_el_type]) # ('input', 'A', '[2:0]', 'reg')
-            else:
-                new_list_el = (io_el[0], io_el_bus_parse[0], '', type_names[io_el_type]) # ('input', 'A', '[2:0]', 'reg')
-
-
-            ## Clean artifacts
-            for el in new_list_el:
-                el.strip()
-
-            debug(f"This el will be added to the list {new_list_el}")
-            self.pin_list.append(new_list_el)
-
+                isBus = item[1] != ''
+                isArray = item[3] != ''
+        
+                if (isBus or isArray):
+                    self.truth_not_supported = True
+             
+                def_item = (tb_translation_type[io_type], item[1], port_name, item[3])
+                debug(f"New def_item is: {def_item}")
+        
+                self.pin_list.append(def_item)
+##Fin qui
         debug(f"The generator's pin list is now {str(self.pin_list)}")
 
     def open_output(self):
@@ -202,18 +205,23 @@ class Generator(object):
         self.print_line("// Pins", "Pins")
         
         for pin in self.pin_list:
-            if (pin[2] != ""):
-                info(f"This script can't handle {pin[1]} since buses aren't implemented")
-                self.truth_not_supported = True; 
-            self.print_line(f"{pin[3]} {pin[1]};")
-        
+            pin_str = ""
+            
+            for attribute in pin:
+                if attribute:
+                    pin_str += (attribute + " ")
+
+            pin_str = pin_str[:-1]
+            pin_str += ";"
+            self.print_line(pin_str)
+
         self.print_line("")
 
     def print_dut(self):
         dut_string = f"{self.module_name} dut("
 
         for pin in self.pin_list:
-            dut_string += f".{pin[1]}({pin[1]}), "
+            dut_string += f".{pin[2]}({pin[2]}), "
 
         dut_string = dut_string[:-2] # remove the trailing ', '
         
@@ -244,7 +252,8 @@ class Generator(object):
         # Find input pins
         input_pins = []
         for pin in self.pin_list:
-            if pin[0] == "input":
+            if pin[0] == "reg":
+                debug(f"pin[3] is input (type reg in TB)")
                 input_pins.append(pin)
 
         combinations = list(map(list, itertools.product([0, 1], repeat=len(input_pins)))) # Array of all the binary combinations of all inputs
@@ -253,14 +262,14 @@ class Generator(object):
         
         toBePrinted = "" # Print buffer for pins = 0
         for pin in input_pins:
-            toBePrinted += f"{pin[1]} = 0; "
+            toBePrinted += f"{pin[2]} = 0; "
 
         self.print_line(toBePrinted)
         
         for combo in combinations:
             combo_str = "#10 "
             for i, pin in enumerate(input_pins):
-                combo_str += f"{pin[1]} = {combo[i]}; "
+                combo_str += f"{pin[2]} = {combo[i]}; "
             self.print_line(combo_str)
 
         self.print_line("end")
@@ -281,8 +290,8 @@ class Generator(object):
         attributes_str = "$time, "
         
         for pin in self.pin_list:
-            monitor_str += f"{pin[1]} = %b, \\t"
-            attributes_str += f"{pin[1]}, "
+            monitor_str += f"{pin[2]} = %b, \\t"
+            attributes_str += f"{pin[2]}, "
 
         # Remove trailing ", "
         monitor_str = monitor_str[:-2]
@@ -300,7 +309,27 @@ class Generator(object):
     def print_end(self):
         self.print_line("")
         self.print_line("endmodule")
+    
+    def gen_bin(self):
+        
+        choose = input("Do you want to let me compile the input file and the testbench with IVERILOG? [Y/N] ")
 
+        if choose != "Y" and choose != "y":
+            info("You chose to not let me generate the bin file for you :-(")
+            return
+
+        compile_command = f"iverilog {self.input_filename} {self.output_filename} -o {self.bin_filename}"
+        
+        debug(f"The compile command is {compile_command}")
+
+        info(f"Running iverilog to compile to {self.bin_filename}...")
+        os.system(compile_command)
+        
+        info("Running the compiled bin...\n")
+        os.system(f"vvp {self.bin_filename}")
+
+
+    
     def close(self):
         if (self.input_file != None):
             self.input_file.close()
@@ -327,8 +356,11 @@ if __name__ == "__main__":
         output_filename = input_filename[:-2] + "_tb.v"
         info(f"Writing to {output_filename}")
     
+    bin_filename = input_filename[:-2] + ".out"
 
-    generator = Generator(input_filename, output_filename)
+    generator = Generator(input_filename, output_filename, bin_filename)
 
     generator.print_file()
-    goodbye(0, generator.close)
+    generator.close()
+    generator.gen_bin()
+    goodbye(0)
