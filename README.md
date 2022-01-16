@@ -1,7 +1,8 @@
 # VeriGoodTest
 This script will generate for you the TB of a Verilog descripted module, including a truth table monitor if you want it
 
-**I took all the regex from [xfguo's tbgen](https://github.com/xfguo/tbgen/blob/master/tbgen.py)**
+**I took some regex from [xfguo's tbgen](https://github.com/xfguo/tbgen/blob/master/tbgen.py)**
+
 
 
 ## Usage
@@ -11,19 +12,22 @@ This script will generate for you the TB of a Verilog descripted module, includi
 ```
 The script will ask you if you want the truth table and if you want the monitor.
 
+If you want to use it as a system program you need to move it in a directory in your `$PATH` such as `/usr/bin/`
 
-## Tests
-In the test folder there's the Verilog implementation of an AND gate, built using NAND. 
-You need to generate the TB first:
 
-```
-./veri_good_test.py tests/AND.v
-```
-The script will generate `tb_AND.v`, 
-then you'll need to compile the Verilog implementation and the TB (I recommend to use [iverilog](https://github.com/steveicarus/iverilog)):
+## Examples
+In the `tests` folder there are various logic gates implementations descripted by Verilog HDL. 
+To run them you need to generate the TB first:
 
 ```
-iverilog tests/AND.v tests/tb_AND.v -o AND.out
+./veri_good_test.py tests/test1.v
+```
+This will generate `tb_test1.v`.
+
+You can then choose to compile it within the script ([iverilog](https://github.com/steveicarus/iverilog)) is required).
+Or you can compile it manually:
+```
+iverilog tests/test1.v tests/test1.v -o tests/test1.out
 ```
 
 
