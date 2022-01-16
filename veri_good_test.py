@@ -111,7 +111,7 @@ class Generator(object):
         ## input [7:0] a, b,
 
         tb_translation_type = ['reg', 'wire']
-        for item in re.findall(r'(input|output|inout)[\s](\[[^\[]*\])?([^\\[\]\n\\;]*)(\[[^\[]*\])?', self.input_data):
+        for item in re.findall(r'(input|output|inout)[\s](\[[^\[]*\])?([^\\[\]\n\\;\)]*)(\[[^\[]*\])?', self.input_data):
             mod = list(item) 
             debug(f"New Item: {item}") 
 
