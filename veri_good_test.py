@@ -9,8 +9,6 @@ import itertools
 
 Debug = True
 
-## TODO: FIX io_write FOR BUSES/ARRAYS
-
 def debug(msg):
     if Debug:
         print(f"[DEBUG]\t{msg}")
