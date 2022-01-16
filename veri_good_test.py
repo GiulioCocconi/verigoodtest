@@ -9,10 +9,7 @@ import itertools
 
 Debug = True
 
-## TODO: FIX REG/WIRE FOR BUSES/ARRAYS
-
-## TODO: ADD SUPPORT FOR IO REGS DECLARED LIKE:
-##       input a,b,c;
+## TODO: FIX io_write FOR BUSES/ARRAYS
 
 def debug(msg):
     if Debug:
