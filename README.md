@@ -27,7 +27,7 @@ This will generate `tb_test1.v`.
 You can then choose to compile it within the script ([iverilog](https://github.com/steveicarus/iverilog)) is required).
 Or you can compile it manually:
 ```
-iverilog tests/test1.v tests/test1.v -o tests/test1.out
+iverilog tests/test1.v tests/test1_tb.v -o tests/test1.out
 ```
 
 
