@@ -1,3 +1,8 @@
+# VeriGoodTest
+This script will generate for you the TB of a Verilog descripted module, including a truth table monitor if you want it
+
+**I took all the regex from [xfguo's tbgen](https://github.com/xfguo/tbgen/blob/master/tbgen.py)**
+
 
 ## Usage
 
@@ -6,7 +11,7 @@
 ```
 The script will ask you if you want the truth table and if you want the monitor.
 
-**I took all the regex from [xfguo's tbgen](https://github.com/xfguo/tbgen/blob/master/tbgen.py)**
+
 ## Tests
 In the test folder there's the Verilog implementation of an AND gate, built using NAND. 
 You need to generate the TB first:
