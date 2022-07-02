@@ -22,7 +22,7 @@ To run them you need to generate the TB first:
 ```
 ./veri_good_test.py tests/test1.v
 ```
-This will generate `tb_test1.v`.
+This will generate `test1_tb.v`.
 
 You can then choose to compile it within the script ([iverilog](https://github.com/steveicarus/iverilog)) is required).
 Or you can compile it manually:
