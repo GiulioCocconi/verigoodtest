@@ -7,7 +7,7 @@ import sys
 import os
 import itertools
 
-Debug = True
+Debug = False
 
 def debug(msg):
     if Debug:
@@ -307,7 +307,7 @@ class Generator(object):
 
     def gen_bin(self):
 
-        choose = input("Do you want to let me compile the input file and the testbench with IVERILOG? [Y/N] ")
+        choose = input("Will you let me compile the testbench with IVERILOG? [Y/N] ")
 
         if choose != "Y" and choose != "y":
             info("You chose to not let me generate the bin file for you :-(")
