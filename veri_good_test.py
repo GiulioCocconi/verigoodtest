@@ -10,8 +10,7 @@ import itertools
 debug = False
 logging.basicConfig(
         format = '[%(levelname)s]: %(message)s',
-        level  = logging.DEBUG if debug else logging.INFO,
-        )
+        level  = logging.DEBUG if debug else logging.INFO)
 
 def usage():
     print(f"USAGE: {sys.argv[0]} <INPUT FILENAME> [OUTPUT TB FILENAME]")
@@ -246,11 +245,11 @@ class Generator(object):
         input_pins = []
         for pin in self.pin_list:
             if pin[0] == "reg":
-                logging.debug(f"pin[3] is input (type reg in TB)")
+                logging.debug(f"{pin[3]} is input (type reg in TB)")
                 input_pins.append(pin)
 
         combinations = list(map(list, itertools.product([0, 1], repeat=len(input_pins)))) # Array of all the binary combinations of all inputs
-        combinations.pop(0) # removes [0, ..., 0] combo, that's handled separately
+        combinations.pop(0) # removes [0, ..., 0] combo that's handled separately
 
 
         toBePrinted = "" # Print buffer for pins = 0
