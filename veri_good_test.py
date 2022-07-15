@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Part of the logic and some of the regex are based on Xiongfei Guo's tbgen
+# Some regular expressions are based on Xiongfei Guo's tbgen
 import logging
 import re
 import sys
@@ -42,11 +42,13 @@ class Generator(object):
         self.module_name = "";
         self.pin_list = []
 
-        self.truth_not_supported = False # If the input file contains features that aren't supported by the truth table generator the user has to write his own test
+        # If the input file contains features that aren't supported by the truth table generator the user has to write his own test
+        self.truth_not_supported = False
 
+
+        # Open files and parse the content
         self.open_input()
         self.clean_input()
-
         self.parser()
         self.open_output()
 
@@ -116,11 +118,16 @@ class Generator(object):
 
             # For "input a,b," io_names will be ["a","b"], that should preserve buses and arrays
             io_names = mod[2].split(sep=",")
-            io_names = [x for x in io_names if x] # Remove empty elements
+
+            # Remove empty elements
+            io_names = [x for x in io_names if x]
+
             logging.debug(f"new io_names found: {io_names}")
 
             for port_name in io_names:
-                temp_io_item = (item[0], item[1], port_name, item[3]) # (direction, bus, name, array)
+
+                # temp_io_item = (direction, bus, name, array)
+                temp_io_item = (item[0], item[1], port_name, item[3])
 
                 # Find TB type
                 if item[0] == "input":
@@ -131,7 +138,6 @@ class Generator(object):
                 elif item[0] == "output":
                     io_type = 1
                 else:
-                    # Handle error
                     logging.error(f"Type {item[0]} is unknown")
                     goodbye(1, self.close)
 
@@ -215,8 +221,8 @@ class Generator(object):
         for pin in self.pin_list:
             dut_string += f".{pin[2]}({pin[2]}), "
 
-        dut_string = dut_string[:-2] # remove the trailing ', '
-
+        # remove the trailing ', '
+        dut_string = dut_string[:-2]
         dut_string += ");"
 
 
@@ -235,12 +241,13 @@ class Generator(object):
 
         choose = input("Do you need a truth table test? [Y/N] ")
 
-        if choose != "Y" and choose != "y":
+        if lower(choose) != "y":
             logging.info("You chose to not let me write a truth table for you :-(")
             return
 
         self.print_line("// Truth table")
         self.print_line("initial begin")
+
         # Find input pins
         input_pins = []
         for pin in self.pin_list:
@@ -248,15 +255,18 @@ class Generator(object):
                 logging.debug(f"{pin[3]} is input (type reg in TB)")
                 input_pins.append(pin)
 
-        combinations = list(map(list, itertools.product([0, 1], repeat=len(input_pins)))) # Array of all the binary combinations of all inputs
-        combinations.pop(0) # removes [0, ..., 0] combo that's handled separately
+         # List all the binary combinations of all inputs
+        combinations = list(map(list, itertools.product([0, 1], repeat=len(input_pins))))
 
+        # removes [0, ..., 0] combo that's handled separately
+        combinations.pop(0)
 
-        toBePrinted = "" # Print buffer for pins = 0
+        # Print buffer for pins = 0
+        init_line = ""
         for pin in input_pins:
-            toBePrinted += f"{pin[2]} = 0; "
+            init_line += f"{pin[2]} = 0; "
 
-        self.print_line(toBePrinted)
+        self.print_line(init_line)
 
         for combo in combinations:
             combo_str = "#10 "
@@ -272,7 +282,7 @@ class Generator(object):
 
         choose = input("Do you need a monitor? [Y/N] ")
 
-        if choose != "Y" and choose != "y":
+        if lower(choose) != "y":
             logging.info("You chose to not let me write a monitor for you :-(")
             return
 
@@ -306,7 +316,7 @@ class Generator(object):
         if not self.truth_not_supported:
             choose = input("Will you let me compile the testbench with IVERILOG? [Y/N] ")
 
-            if choose != "Y" and choose != "y":
+            if lower(choose) != "y":
                 logging.info("You chose to not let me generate the bin file for you :-(")
                 return
 
