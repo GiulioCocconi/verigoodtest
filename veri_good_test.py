@@ -1,23 +1,17 @@
 #!/usr/bin/python
 
 # Part of the logic and some of the regex are based on Xiongfei Guo's tbgen
-
+import logging
 import re
 import sys
 import os
 import itertools
 
-Debug = True
-
-def debug(msg):
-    if Debug:
-        print(f"[DEBUG]\t{msg}")
-
-def info(msg):
-    print(f"[INFO]\t{msg}");
-
-def error(msg):
-    sys.stderr.write(f"[ERROR]\t{msg}!\n")
+debug = False
+logging.basicConfig(
+        format = '[%(levelname)s]: %(message)s',
+        level  = logging.DEBUG if debug else logging.INFO,
+        )
 
 def usage():
     print(f"USAGE: {sys.argv[0]} <INPUT FILENAME> [OUTPUT TB FILENAME]")
@@ -43,7 +37,7 @@ class Generator(object):
         self.bin_filename = bin_filename
         self.input_file = None
         self.output_file = None
-        debug(f"Generator has been configured to read from {input_filename} and write to {output_filename}")
+        logging.debug(f"Generator has been configured to read from {input_filename} and write to {output_filename}")
 
         self.input_data = ""; # The content of the input file
         self.module_name = "";
@@ -61,11 +55,11 @@ class Generator(object):
         try:
             self.input_file = open(self.input_filename, 'r')
             self.input_data = self.input_file.read()
-            debug("Input opened")
-            debug("Content:\n" + self.input_data)
+            logging.debug("Input opened")
+            logging.debug("Content:\n" + self.input_data)
         except Exception as e:
-            error(f"The generator is unable to read {self.input_filename}")
-            error(str(e))
+            logging.error(f"The generator is unable to read {self.input_filename}")
+            logging.error(str(e))
             goodbye(1, self.close)
 
     def clean_input(self):
@@ -73,7 +67,7 @@ class Generator(object):
         Removes all useless tokens from input file
         '''
 
-        debug("Cleaning input")
+        logging.debug("Cleaning input")
 
         ## clean "//..."
         self.input_data = re.sub(r"//[^\n^\r]*", '', self.input_data)
@@ -87,21 +81,21 @@ class Generator(object):
         ## Remove empty lines
         self.input_data = re.sub(r'\n\s*\n', '\n', self.input_data, re.MULTILINE)
 
-        debug("Content:\n" + self.input_data)
+        logging.debug("Content:\n" + self.input_data)
 
     def parser(self):
-        info(f"Parsing {self.input_filename}...")
+        logging.info(f"Parsing {self.input_filename}...")
         self.parse_module_name()
         self.parse_io()
 
     def parse_module_name(self):
-        debug("Parsing module name...")
+        logging.debug("Parsing module name...")
 
         mod_pattern_string = r"module[\s]([^\(\)\;\n\s]*)"
         module_result = re.findall(mod_pattern_string, self.input_data)
         self.module_name = module_result[0]
 
-        debug(f"Found module name {self.module_name}")
+        logging.debug(f"Found module name {self.module_name}")
 
     def parse_io(self):
         '''
@@ -117,14 +111,14 @@ class Generator(object):
         tb_translation_type = ['reg', 'wire']
         for item in re.findall(r'(input|output|inout)[\s](\[[^\[]*\])?([^\\[\]\n\\;\)]*)(\[[^\[]*\])?', self.input_data):
             mod = list(item)
-            debug(f"New Item: {item}")
+            logging.debug(f"New Item: {item}")
 
             mod[2] = mod[2].replace(" ", "")
 
             # For "input a,b," io_names will be ["a","b"], that should preserve buses and arrays
             io_names = mod[2].split(sep=",")
             io_names = [x for x in io_names if x] # Remove empty elements
-            debug(f"new io_names found: {io_names}")
+            logging.debug(f"new io_names found: {io_names}")
 
             for port_name in io_names:
                 temp_io_item = (item[0], item[1], port_name, item[3]) # (direction, bus, name, array)
@@ -139,7 +133,7 @@ class Generator(object):
                     io_type = 1
                 else:
                     # Handle error
-                    error(f"Type {item[0]} is unknown")
+                    logging.error(f"Type {item[0]} is unknown")
                     goodbye(1, self.close)
 
                 isBus = item[1] != ''
@@ -149,30 +143,30 @@ class Generator(object):
                     self.truth_not_supported = True
 
                 def_item = (tb_translation_type[io_type], item[1], port_name, item[3])
-                debug(f"New def_item is: {def_item}")
+                logging.debug(f"New def_item is: {def_item}")
 
                 self.pin_list.append(def_item)
-        debug(f"The generator's pin list is now {str(self.pin_list)}")
+        logging.debug(f"The generator's pin list is now {str(self.pin_list)}")
 
     def open_output(self):
         try:
             self.output_file = open(self.output_filename, "w");
-            debug("Output opened")
+            logging.debug("Output opened")
         except Exception as e:
-            error(f"Generator can't write to {self.output_filename}")
+            logging.error(f"Generator can't write to {self.output_filename}")
             print(e)
             goodbye(1, self.close())
 
     def print_line(self, string, debug_msg = None):
         if self.output_file == None:
-            error("Output file is not opened!")
+            logging.error("Output file is not opened!")
             goodbye(1, self.close)
 
         if debug_msg == None:
             debug_msg = string
 
         if string != "":
-            debug(f"Printing: {debug_msg}")
+            logging.debug(f"Printing: {debug_msg}")
         print(string, file=self.output_file)
 
     def print_file(self):
@@ -237,13 +231,13 @@ class Generator(object):
         '''
 
         if self.truth_not_supported:
-            info("You've used features not supported by this program's truth table generator, you'll have to write your own truth table")
+            logging.info("You've used features not supported by this program's truth table generator, you'll have to write your own truth table")
             return
 
         choose = input("Do you need a truth table test? [Y/N] ")
 
         if choose != "Y" and choose != "y":
-            info("You chose to not let me write a truth table for you :-(")
+            logging.info("You chose to not let me write a truth table for you :-(")
             return
 
         self.print_line("// Truth table")
@@ -252,7 +246,7 @@ class Generator(object):
         input_pins = []
         for pin in self.pin_list:
             if pin[0] == "reg":
-                debug(f"pin[3] is input (type reg in TB)")
+                logging.debug(f"pin[3] is input (type reg in TB)")
                 input_pins.append(pin)
 
         combinations = list(map(list, itertools.product([0, 1], repeat=len(input_pins)))) # Array of all the binary combinations of all inputs
@@ -280,7 +274,7 @@ class Generator(object):
         choose = input("Do you need a monitor? [Y/N] ")
 
         if choose != "Y" and choose != "y":
-            info("You chose to not let me write a monitor for you :-(")
+            logging.info("You chose to not let me write a monitor for you :-(")
             return
 
         self.print_line("initial begin")
@@ -314,17 +308,17 @@ class Generator(object):
             choose = input("Will you let me compile the testbench with IVERILOG? [Y/N] ")
 
             if choose != "Y" and choose != "y":
-                info("You chose to not let me generate the bin file for you :-(")
+                logging.info("You chose to not let me generate the bin file for you :-(")
                 return
 
             compile_command = f"iverilog {self.output_filename} -o {self.bin_filename}"
 
-            debug(f"The compile command is {compile_command}")
+            logging.debug(f"The compile command is {compile_command}")
 
-            info(f"Running iverilog to compile to {self.bin_filename}...")
+            logging.info(f"Running iverilog to compile to {self.bin_filename}...")
             os.system(compile_command)
 
-            info("Running the compiled bin...\n")
+            logging.info("Running the compiled bin...\n")
             os.system(f"vvp {self.bin_filename}")
 
 
@@ -336,14 +330,14 @@ class Generator(object):
         if (self.output_file != None):
             self.output_file.close()
 
-        debug("Generator closed")
+        logging.debug("Generator closed")
 
 
 if __name__ == "__main__":
 
     # If the program hasn't got the right number of args
     if len(sys.argv) < 2 or len(sys.argv) > 3:
-        error("Incorrect number of arguments")
+        logging.error("Incorrect number of arguments")
         usage()
         goodbye(1)
 
@@ -357,7 +351,7 @@ if __name__ == "__main__":
         output_filename = sys.argv[2]
     else:
         output_filename = input_filename[:-2] + "_tb.v"
-        info(f"Writing to {output_filename}")
+        logging.info(f"Writing to {output_filename}")
 
     bin_filename = input_filename[:-2] + ".out"
 
